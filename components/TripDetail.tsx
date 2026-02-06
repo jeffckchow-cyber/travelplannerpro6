@@ -24,7 +24,9 @@ import {
   Navigation,
   Share2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Edit2,
+  Save
 } from 'lucide-react';
 import { useTrips } from '../store';
 import { ACTIVITY_CONFIG } from '../constants';
@@ -47,6 +49,7 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
   const [isModalOpen, setIsModalOpen] = useState<'activity' | 'stay' | 'transport' | 'settings' | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewItem, setPreviewItem] = useState<Attachment | null>(null);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
 
   // Edit states
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -242,6 +245,20 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
       case 'settings': return 'Trip Settings';
       default: return '';
     }
+  };
+
+  const renderNotes = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.split('\n').map((line, i) => (
+      <p key={i} className="mb-2 last:mb-0">
+        {line.split(urlRegex).map((part, j) => {
+          if (part.match(urlRegex)) {
+            return <a key={j} href={part} target="_blank" rel="noopener noreferrer" className="text-[#D4AF37] hover:underline break-all">{part}</a>;
+          }
+          return part;
+        })}
+      </p>
+    ));
   };
 
   return (
@@ -530,9 +547,30 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
           {activeSubTab === 'budget' && <Budget />}
           
           {activeSubTab === 'notes' && (
-            <div className="space-y-3">
-              <h3 className="text-2xl font-black uppercase tracking-tight">Trip Notes</h3>
-              <textarea className="w-full h-[350px] bg-[#2C2C2E] border border-white/5 rounded-[24px] p-5 outline-none focus:border-[#D4AF37] transition-all resize-none text-white/70 text-sm font-medium leading-relaxed" placeholder="Important addresses, packing lists..." value={trip.notes} onChange={(e) => updateNotes(trip.id, e.target.value)} />
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-2xl font-black uppercase tracking-tight">Trip Notes</h3>
+                <button 
+                  onClick={() => setIsEditingNotes(!isEditingNotes)}
+                  className="p-2 bg-white/5 rounded-xl text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest"
+                >
+                  {isEditingNotes ? <><Save size={14} /> Finish</> : <><Edit2 size={14} /> Edit</>}
+                </button>
+              </div>
+              
+              {isEditingNotes ? (
+                <textarea 
+                  className="w-full h-[400px] bg-[#2C2C2E] border border-white/10 rounded-[24px] p-6 outline-none focus:border-[#D4AF37] transition-all resize-none text-white/80 text-sm font-medium leading-relaxed shadow-inner" 
+                  placeholder="Paste links, addresses, packing lists, or random thoughts..." 
+                  value={trip.notes} 
+                  onChange={(e) => updateNotes(trip.id, e.target.value)} 
+                  autoFocus
+                />
+              ) : (
+                <div className="w-full min-h-[400px] bg-[#2C2C2E] border border-white/5 rounded-[24px] p-6 text-white/70 text-sm font-medium leading-relaxed overflow-y-auto custom-scrollbar whitespace-pre-wrap">
+                  {trip.notes ? renderNotes(trip.notes) : <span className="opacity-20 italic">No notes added yet...</span>}
+                </div>
+              )}
             </div>
           )}
         </div>
