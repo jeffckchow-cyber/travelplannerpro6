@@ -1,0 +1,7 @@
+{
+  "name": "Travel Planner Pro 6 supabase trial",
+  "description": "A high-end, dark-mode travel planning application with itinerary builders, budget tracking, and checklist tools.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
