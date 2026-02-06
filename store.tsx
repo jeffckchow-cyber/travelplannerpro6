@@ -1,11 +1,13 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Trip, AppState, Activity, Stay, TransportDetail } from './types';
 import { saveLocalState, getLocalState } from './services/dbService';
 import { syncAppState, fetchAppState } from './services/supabaseClient';
 
 interface TripContextType {
   state: AppState;
+  isSyncing: boolean;
+  syncError: boolean;
   addTrip: (trip: Omit<Trip, 'id' | 'dailyItinerary' | 'budget' | 'checklist' | 'status' | 'stays' | 'transports' | 'notes'>) => void;
   updateTrip: (tripId: string, updates: Partial<Trip>) => void;
   deleteTrip: (id: string) => void;
@@ -24,6 +26,7 @@ interface TripContextType {
   addChecklistItem: (tripId: string, item: string) => void;
   importFullState: (newState: AppState) => void;
   importSingleTrip: (newTrip: Trip) => void;
+  refreshFromCloud: () => Promise<void>;
 }
 
 const TripContext = createContext<TripContextType | undefined>(undefined);
@@ -56,36 +59,92 @@ const INITIAL_TRIPS: Trip[] = [
 
 export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AppState>({ trips: INITIAL_TRIPS, activeTripId: null });
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState(false);
+  const skipSyncRef = useRef(false);
 
-  // 1. Initial Load: IndexedDB (Fast) -> Supabase (Sync)
+  // Aggressive Fetch Logic: Open -> Local -> Remote
   useEffect(() => {
     const init = async () => {
-      // Try local IndexedDB first
+      console.log("[AppInit] Initializing data...");
+      
       const local = await getLocalState();
       if (local) {
+        console.log("[AppInit] Local state restored.");
         setState(local);
       }
 
-      // Sync from Supabase in background
-      const remote = await fetchAppState();
-      if (remote) {
-        setState(remote);
-        await saveLocalState(remote);
+      if (navigator.onLine) {
+        try {
+          const remote = await fetchAppState();
+          if (remote) {
+            console.log("[AppInit] Cloud data found. Synchronizing...");
+            skipSyncRef.current = true; 
+            setState(remote);
+            await saveLocalState(remote);
+          }
+        } catch (err) {
+          console.error("[AppInit] Cloud sync interrupted during init.");
+          setSyncError(true);
+        }
       }
     };
     init();
   }, []);
 
-  // 2. Persistence Side Effect
+  // Sync state to cloud on changes
   useEffect(() => {
-    if (state.trips.length > 0) {
-      saveLocalState(state);
-      // Background sync to Supabase (debounced ideally, but here direct for trial)
-      if (navigator.onLine) {
-        syncAppState(state);
+    const performSync = async () => {
+      if (skipSyncRef.current) {
+        skipSyncRef.current = false;
+        return;
       }
-    }
+
+      // Important: Save locally first
+      saveLocalState(state);
+
+      if (navigator.onLine && state.trips.length > 0) {
+        setIsSyncing(true);
+        try {
+          await syncAppState(state);
+          setSyncError(false);
+        } catch (e) {
+          console.error("[Sync] Background update failed. Changes saved locally only.");
+          setSyncError(true);
+        } finally {
+          setIsSyncing(false);
+        }
+      }
+    };
+
+    const timer = setTimeout(performSync, 1000); // Debounce sync
+    return () => clearTimeout(timer);
   }, [state]);
+
+  const refreshFromCloud = async () => {
+    if (!navigator.onLine) {
+      alert("No internet connection.");
+      return;
+    }
+    setIsSyncing(true);
+    setSyncError(false);
+    try {
+      const remote = await fetchAppState();
+      if (remote) {
+        skipSyncRef.current = true;
+        setState(remote);
+        await saveLocalState(remote);
+        console.log("[ManualSync] Successfully updated with cloud data.");
+      } else {
+        console.log("[ManualSync] No remote data available.");
+      }
+    } catch (err) {
+      console.error("[ManualSync] Sync operation failed.");
+      setSyncError(true);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const addTrip = useCallback((data: any) => {
     const start = new Date(data.startDate);
@@ -106,34 +165,8 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState(prev => {
       const index = prev.trips.findIndex(t => t.id === tripId);
       if (index === -1) return prev;
-
-      const oldTrip = prev.trips[index];
-      const newTrip = { ...oldTrip, ...updates };
-
-      if (updates.startDate !== undefined || updates.endDate !== undefined) {
-        const s = new Date(newTrip.startDate);
-        const e = new Date(newTrip.endDate);
-        
-        if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
-          const daysCount = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 3600 * 24)) + 1);
-          const existingActivities = new Map();
-          oldTrip.dailyItinerary.forEach(d => existingActivities.set(d.date, d.activities));
-          
-          newTrip.dailyItinerary = Array.from({ length: daysCount }, (_, i) => {
-            const d = new Date(s);
-            d.setDate(s.getDate() + i);
-            const dateStr = d.toISOString().split('T')[0];
-            return {
-              day: i + 1,
-              date: dateStr,
-              activities: existingActivities.get(dateStr) || []
-            };
-          });
-        }
-      }
-
       const newTrips = [...prev.trips];
-      newTrips[index] = newTrip;
+      newTrips[index] = { ...newTrips[index], ...updates };
       return { ...prev, trips: newTrips };
     });
   }, []);
@@ -240,9 +273,9 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <TripContext.Provider value={{
-      state, addTrip, updateTrip, deleteTrip, setActiveTrip, addActivity, updateActivity, deleteActivity, 
+      state, isSyncing, syncError, addTrip, updateTrip, deleteTrip, setActiveTrip, addActivity, updateActivity, deleteActivity, 
       addStay, updateStay, deleteStay, addTransport, updateTransport, deleteTransport, updateNotes, updateChecklist, addChecklistItem,
-      importFullState, importSingleTrip
+      importFullState, importSingleTrip, refreshFromCloud
     }}>
       {children}
     </TripContext.Provider>

@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -22,7 +22,9 @@ import {
   Eye,
   Maximize2,
   Navigation,
-  Share2
+  Share2,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { useTrips } from '../store';
 import { ACTIVITY_CONFIG } from '../constants';
@@ -44,6 +46,7 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
   const [selectedDay, setSelectedDay] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState<'activity' | 'stay' | 'transport' | 'settings' | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [previewItem, setPreviewItem] = useState<Attachment | null>(null);
 
   // Edit states
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -58,6 +61,20 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
   const [editTripData, setEditTripData] = useState({ title: '', coverImage: '', bannerPosition: 50, startDate: '', endDate: '' });
 
   const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle browser/system back button for modal
+  useEffect(() => {
+    const handlePopState = () => {
+      if (previewItem) {
+        setPreviewItem(null);
+      }
+    };
+    if (previewItem) {
+      window.history.pushState({ modal: 'preview' }, '');
+      window.addEventListener('popstate', handlePopState);
+    }
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [previewItem]);
 
   if (!trip) return null;
 
@@ -108,19 +125,25 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
     if (file) {
       setIsUploading(true);
       try {
-        const publicUrl = await uploadAttachment(file);
-        if (publicUrl) {
+        const result = await uploadAttachment(file);
+        if (result === 'RLS_ERROR') {
+          alert("Supabase Policy Error: Your bucket RLS policies prevent anonymous uploads. Please enable 'INSERT' for 'anon' users in your Supabase Storage settings.");
+        } else if (result) {
           setAttachments(prev => [...prev, { 
             id: crypto.randomUUID(), 
             name: file.name, 
             type: file.type, 
-            data: publicUrl 
+            data: result 
           }]);
+        } else {
+          alert("Failed to upload attachment. Check your connection.");
         }
       } catch (error) {
         console.error("Upload failed", error);
+        alert("An unexpected error occurred during upload.");
       } finally {
         setIsUploading(false);
+        if (e.target) e.target.value = ''; 
       }
     }
   };
@@ -148,27 +171,7 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
   };
 
   const viewAttachment = (att: Attachment) => {
-    // If it's a Supabase URL, just open it
-    if (att.data.startsWith('http')) {
-      window.open(att.data, '_blank');
-      return;
-    }
-    // Fallback for legacy base64
-    const win = window.open();
-    if (win) {
-      win.document.write(`
-        <html>
-          <head><title>${att.name}</title></head>
-          <body style="margin:0; display:flex; justify-content:center; align-items:center; background:#1c1c1e; height:100vh;">
-            ${att.type.startsWith('image/') 
-              ? `<img src="${att.data}" style="max-width:100%; max-height:100%; object-fit:contain;"/>`
-              : `<iframe src="${att.data}" frameborder="0" style="width:100%; height:100%;"></iframe>`
-            }
-          </body>
-        </html>
-      `);
-      win.document.close();
-    }
+    setPreviewItem(att);
   };
 
   const removeAttachment = (id: string) => setAttachments(prev => prev.filter(a => a.id !== id));
@@ -243,7 +246,7 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
 
   return (
     <div className="flex flex-col h-screen bg-[#1C1C1E] text-white overflow-y-auto custom-scrollbar scroll-smooth">
-      {/* BANNER SECTION - SCROLLS AWAY */}
+      {/* BANNER SECTION */}
       <div className="shrink-0 relative group h-48 md:h-72 overflow-hidden bg-black">
         <img 
           src={trip.coverImage} 
@@ -263,18 +266,10 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
                     <Camera size={18} />
                     <input type="file" ref={bannerInputRef} className="hidden" accept="image/*" onChange={handleBannerUpload} />
                 </button>
-                <button 
-                  onClick={handleExportTrip} 
-                  className="p-2 bg-black/40 backdrop-blur-md rounded-full text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-all"
-                  title="Share Journey (Export JSON)"
-                >
+                <button onClick={handleExportTrip} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-all">
                     <Share2 size={18} />
                 </button>
-                <button 
-                  onClick={() => { setEditTripData({ title: trip.title, coverImage: trip.coverImage, bannerPosition: trip.bannerPosition ?? 50, startDate: trip.startDate, endDate: trip.endDate }); setIsModalOpen('settings'); }} 
-                  className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-[#D4AF37] hover:text-black transition-all"
-                  title="Settings"
-                >
+                <button onClick={() => { setEditTripData({ title: trip.title, coverImage: trip.coverImage, bannerPosition: trip.bannerPosition ?? 50, startDate: trip.startDate, endDate: trip.endDate }); setIsModalOpen('settings'); }} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-[#D4AF37] hover:text-black transition-all">
                     <Settings size={18} />
                 </button>
             </div>
@@ -288,7 +283,7 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* STICKY HEADER SECTION - STAYS FIXED AFTER BANNER SCROLLS */}
+      {/* STICKY HEADER SECTION */}
       <div className="sticky top-0 z-50 bg-[#1C1C1E] shadow-2xl">
         {renderSubTabs()}
 
@@ -319,7 +314,7 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
                   <h3 className="text-xl font-black uppercase tracking-tight">Day {currentDay?.day}</h3>
                   <p className="text-[10px] font-bold opacity-30 uppercase tracking-[0.2em]">{currentDay?.date}</p>
                 </div>
-                <button onClick={() => openActivityModal()} className="w-10 h-10 bg-[#D4AF37] rounded-xl flex items-center justify-center shadow-lg hover:scale-105 transition-all active:scale-95">
+                <button onClick={() => openActivityModal()} className="w-10 h-10 bg-[#D4AF37] rounded-xl flex items-center justify-center shadow-lg hover:scale-105 transition-all">
                   <Plus size={20} className="text-black" />
                 </button>
               </div>
@@ -562,7 +557,6 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
                          <button key={type} onClick={() => setNewActivity({...newActivity, type})} className={`flex-1 min-w-[70px] py-2 text-[10px] font-black rounded-lg transition-all ${newActivity.type === type ? 'bg-[#D4AF37] text-black shadow-md' : 'text-white/20 hover:text-white/40'}`}>{type.toUpperCase()}</button>
                        ))}
                     </div>
-                    {/* Fixed overlapping grid for iPhone */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-[9px] font-black opacity-30 uppercase ml-2">Time</label>
@@ -589,14 +583,18 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
                     <div className="pt-3 border-t border-white/10">
                       <div className="flex justify-between items-center mb-3">
                         <h4 className="text-[9px] font-black opacity-30 uppercase">Attachments</h4>
-                        <label className="flex items-center gap-1.5 cursor-pointer bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-white/5">
-                          {isUploading ? 'Uploading...' : <><Plus size={12} /> Add</>}
+                        <label className={`flex items-center gap-1.5 cursor-pointer bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-white/5 transition-all ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                          {isUploading ? (
+                            <><Loader2 size={12} className="animate-spin" /> Uploading...</>
+                          ) : (
+                            <><Plus size={12} /> Add</>
+                          )}
                           <input type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
                         </label>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {attachments.map(att => (
-                          <div key={att.id} className="flex items-center gap-1.5 bg-[#D4AF37]/10 px-2 py-1.5 rounded-lg text-[9px] font-bold border border-[#D4AF37]/20">
+                          <div key={att.id} className="flex items-center gap-1.5 bg-[#D4AF37]/10 px-2 py-1.5 rounded-lg text-[9px] font-bold border border-[#D4AF37]/20 group/att">
                             <button onClick={() => viewAttachment(att)} className="truncate max-w-[100px] text-left hover:underline">{att.name}</button>
                             <button onClick={() => removeAttachment(att.id)} className="text-[#D4AF37] hover:text-white"><X size={12} /></button>
                           </div>
@@ -604,7 +602,7 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
                       </div>
                     </div>
 
-                    <button onClick={() => { editingItem ? updateActivity(trip.id, selectedDay, {...newActivity as Activity, attachments}) : addActivity(trip.id, selectedDay, {...newActivity as any, attachments}); setIsModalOpen(null); }} className="w-full py-4 bg-[#D4AF37] text-black rounded-[20px] font-black shadow-xl text-sm uppercase" disabled={isUploading}>SAVE</button>
+                    <button onClick={() => { editingItem ? updateActivity(trip.id, selectedDay, {...newActivity as Activity, attachments}) : addActivity(trip.id, selectedDay, {...newActivity as any, attachments}); setIsModalOpen(null); }} className="w-full py-4 bg-[#D4AF37] text-black rounded-[20px] font-black shadow-xl text-sm uppercase transition-all disabled:opacity-50" disabled={isUploading}>SAVE</button>
                   </>
                 )}
 
@@ -630,8 +628,12 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
                     <div className="pt-3 border-t border-white/10">
                       <div className="flex justify-between items-center mb-3">
                         <h4 className="text-[9px] font-black opacity-30 uppercase">Attachments</h4>
-                        <label className="flex items-center gap-1.5 cursor-pointer bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-white/5">
-                          {isUploading ? 'Uploading...' : <><Plus size={12} /> Add</>}
+                        <label className={`flex items-center gap-1.5 cursor-pointer bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-white/5 transition-all ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                          {isUploading ? (
+                            <><Loader2 size={12} className="animate-spin" /> Uploading...</>
+                          ) : (
+                            <><Plus size={12} /> Add</>
+                          )}
                           <input type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
                         </label>
                       </div>
@@ -645,7 +647,7 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
                       </div>
                     </div>
 
-                    <button onClick={() => { editingItem ? updateStay(trip.id, {...newStay as Stay, attachments}) : addStay(trip.id, {...newStay as any, attachments}); setIsModalOpen(null); }} className="w-full py-4 bg-[#D4AF37] text-black rounded-[20px] font-black shadow-xl uppercase" disabled={isUploading}>SAVE</button>
+                    <button onClick={() => { editingItem ? updateStay(trip.id, {...newStay as Stay, attachments}) : addStay(trip.id, {...newStay as any, attachments}); setIsModalOpen(null); }} className="w-full py-4 bg-[#D4AF37] text-black rounded-[20px] font-black shadow-xl uppercase transition-all disabled:opacity-50" disabled={isUploading}>SAVE</button>
                   </>
                 )}
 
@@ -670,7 +672,6 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
                         <input type="text" className="bg-[#1C1C1E] rounded-xl px-4 py-3 w-full text-sm font-bold border border-white/5 outline-none focus:border-[#D4AF37]" placeholder="To (e.g. JFK)" value={newTransport.to} onChange={e => setNewTransport({...newTransport, to: e.target.value})} />
                       </div>
                     </div>
-                    {/* Responsive container for departure/arrival details */}
                     <div className="p-4 bg-[#1C1C1E] rounded-[24px] space-y-4 border border-white/5">
                       <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex-1">
@@ -688,8 +689,12 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
                     <div className="pt-3 border-t border-white/10">
                       <div className="flex justify-between items-center mb-3">
                         <h4 className="text-[9px] font-black opacity-30 uppercase">Attachments</h4>
-                        <label className="flex items-center gap-1.5 cursor-pointer bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-white/5">
-                          {isUploading ? 'Uploading...' : <><Plus size={12} /> Add</>}
+                        <label className={`flex items-center gap-1.5 cursor-pointer bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-white/5 transition-all ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                          {isUploading ? (
+                            <><Loader2 size={12} className="animate-spin" /> Uploading...</>
+                          ) : (
+                            <><Plus size={12} /> Add</>
+                          )}
                           <input type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
                         </label>
                       </div>
@@ -702,7 +707,7 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
                         ))}
                       </div>
                     </div>
-                    <button onClick={() => { editingItem ? updateTransport(trip.id, {...newTransport as TransportDetail, attachments}) : addTransport(trip.id, {...newTransport as any, attachments}); setIsModalOpen(null); }} className="w-full py-4 bg-[#D4AF37] text-black rounded-[20px] font-black shadow-xl uppercase" disabled={isUploading}>SAVE</button>
+                    <button onClick={() => { editingItem ? updateTransport(trip.id, {...newTransport as TransportDetail, attachments}) : addTransport(trip.id, {...newTransport as any, attachments}); setIsModalOpen(null); }} className="w-full py-4 bg-[#D4AF37] text-black rounded-[20px] font-black shadow-xl uppercase transition-all disabled:opacity-50" disabled={isUploading}>SAVE</button>
                   </>
                 )}
 
@@ -728,11 +733,52 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
                         </div>
                     </div>
                     <div className="pt-4 border-t border-white/5 space-y-3">
-                      <button onClick={() => { updateTrip(trip.id, editTripData); setIsModalOpen(null); }} className="w-full py-4 bg-[#D4AF37] text-black rounded-[20px] font-black shadow-xl tracking-widest text-xs uppercase">SAVE</button>
+                      <button onClick={() => { updateTrip(trip.id, editTripData); setIsModalOpen(null); }} className="w-full py-4 bg-[#D4AF37] text-black rounded-[20px] font-black shadow-xl tracking-widest text-xs uppercase transition-all">SAVE</button>
                       <button onClick={() => { if(confirm('Erase this entire adventure?')) { setActiveTrip(null); deleteTrip(trip.id); }}} className="w-full py-2 text-red-500 font-bold text-[9px] uppercase tracking-[0.2em] opacity-30 hover:opacity-100 transition-opacity">Delete Journey</button>
                     </div>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {previewItem && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 sm:p-8">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative w-full h-full max-w-5xl flex flex-col items-center justify-center"
+            >
+              <button 
+                onClick={() => setPreviewItem(null)} 
+                className="absolute top-0 right-0 p-3 bg-white/10 rounded-full text-[#D4AF37] hover:bg-white/20 transition-all z-[210] shadow-xl"
+              >
+                <X size={24} />
+              </button>
+              
+              <div className="w-full h-full rounded-2xl overflow-hidden bg-[#1C1C1E] shadow-2xl flex items-center justify-center border border-white/10">
+                {previewItem.type.startsWith('image/') ? (
+                  <img 
+                    src={previewItem.data} 
+                    className="max-w-full max-h-full object-contain" 
+                    alt={previewItem.name} 
+                  />
+                ) : (
+                  <iframe 
+                    src={previewItem.data} 
+                    className="w-full h-full border-none" 
+                    title={previewItem.name}
+                  />
+                )}
+              </div>
+              
+              <div className="mt-4 flex flex-col items-center gap-1">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">{previewItem.name}</span>
+                <span className="text-[8px] font-bold text-white/30 uppercase">{previewItem.type}</span>
               </div>
             </motion.div>
           </div>
