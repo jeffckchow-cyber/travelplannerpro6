@@ -4,6 +4,10 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = 'https://kicskjevzuegrxcektnd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpY3NramV2enVlZ3J4Y2VrdG5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMzU1NjgsImV4cCI6MjA4NTkxMTU2OH0.KsEBcE_56vWPMj6-ho-2OGJ3RYCHfrTxOecXK0NPrmc';
 
+// The ID used to identify the single itinerary record shared across devices.
+// User confirmed the database 'id' column is now of type TEXT.
+const SHARED_STATE_ID = 'global-state-v1';
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
@@ -44,29 +48,28 @@ export const uploadAttachment = async (file: File): Promise<string | null> => {
 };
 
 /**
- * Pushes the current application state to the cloud using the 'data' column.
+ * Pushes the current application state to the cloud.
  */
 export const syncAppState = async (state: any) => {
   console.group('[Supabase:Sync]');
   try {
+    console.log('Attempting Upsert for ID:', SHARED_STATE_ID);
     const { data, error } = await supabase
       .from('itineraries')
       .upsert({ 
-        id: 'global-state-v1', 
-        data: state, // Changed from trip_data to data
+        id: SHARED_STATE_ID, 
+        data: state,
         updated_at: new Date().toISOString() 
       }, { onConflict: 'id' })
       .select();
 
     if (error) {
-      console.error('Database Sync Error:', error.message);
-      if (error.message.includes('column "trip_data"')) {
-        console.error('CRITICAL: The table is looking for "trip_data", but we are sending "data". Please check table columns.');
-      }
+      console.error('Database Sync Failed:', error.message);
+      console.error('Error Hint:', error.hint);
       throw error;
     }
 
-    console.log('Remote state updated successfully.');
+    console.log('Cloud Sync Success:', data);
     console.groupEnd();
   } catch (err) {
     console.groupEnd();
@@ -75,28 +78,29 @@ export const syncAppState = async (state: any) => {
 };
 
 /**
- * Pulls the latest application state from the cloud using the 'data' column.
+ * Pulls the latest application state from the cloud.
  */
 export const fetchAppState = async () => {
   console.group('[Supabase:Fetch]');
   try {
+    console.log('Querying ID:', SHARED_STATE_ID);
     const { data, error } = await supabase
       .from('itineraries')
-      .select('data, updated_at') // Changed from trip_data to data
-      .eq('id', 'global-state-v1')
+      .select('data, updated_at')
+      .eq('id', SHARED_STATE_ID)
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
-        console.log('Remote record not found (clean slate).');
+        console.log('No cloud record found. This is normal for new accounts.');
       } else {
-        console.error('Fetch Error:', error.message);
+        console.error('Fetch Failed:', error.message);
       }
       console.groupEnd();
       return null;
     }
     
-    console.log(`Remote data fetched (Last Update: ${data.updated_at})`);
+    console.log(`Cloud data retrieved. Last Updated: ${data.updated_at}`);
     console.groupEnd();
     return data?.data;
   } catch (err) {
