@@ -831,18 +831,26 @@ export const TripDetail: React.FC<TripDetailProps> = ({ onBack }) => {
               {previewItem.type.startsWith('image/') ? (
                 <img src={previewItem.data} alt={previewItem.name} className="max-w-full max-h-[80vh] object-contain rounded-lg" />
               ) : previewItem.type.includes('pdf') ? (
-                <div className="w-full h-[80vh] flex flex-col gap-4">
-                  <div className="flex-1 bg-white rounded-lg overflow-hidden relative">
-                    <iframe src={previewItem.data} className="w-full h-full border-none" title={previewItem.name} />
-                    {/* Fallback overlay if iframe is blocked */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/5 pointer-events-none">
-                      <p className="text-black/20 text-xs font-bold uppercase tracking-widest">PDF Viewer</p>
-                    </div>
+                <div className="w-full h-[70vh] md:h-[80vh] flex flex-col gap-4">
+                  <div className="flex-1 bg-white rounded-3xl overflow-hidden relative shadow-2xl border border-white/10">
+                    <iframe 
+                      src={previewItem.data} 
+                      className="w-full h-full border-none" 
+                      title={previewItem.name} 
+                    />
                   </div>
-                  <div className="flex justify-center gap-4">
-                    <a href={previewItem.data} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#594D31] px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#A68B5B] transition-colors">
-                      <ExternalLink size={16} /> Open Fullscreen
+                  <div className="flex flex-col gap-3">
+                    <a 
+                      href={previewItem.data} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="w-full flex items-center justify-center gap-3 bg-[#594D31] py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-[#A68B5B] transition-all shadow-xl"
+                    >
+                      <ExternalLink size={18} /> Open Full Document
                     </a>
+                    <p className="text-[9px] text-center text-white/30 font-black uppercase tracking-widest px-4">
+                      On mobile devices, please open the full document to scroll through all pages.
+                    </p>
                   </div>
                 </div>
               ) : (
