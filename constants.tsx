@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { 
   Utensils, 
   Camera, 
@@ -12,13 +12,17 @@ import {
   CloudRain,
   CloudSnow
 } from 'lucide-react';
+import React from 'react';
 import { ActivityType } from './types';
 
 export const COLORS = {
   bgPrimary: '#1C1C1E',
   bgSecondary: '#2C2C2E',
   bgTertiary: '#3A3A3C',
-  brandGold: '#D4AF37',
+  // Coloro 091-37-14 (Deep Muted Bronze)
+  brandGold: '#594D31', 
+  // A lifted, luminous version of the same hue for high-contrast text/labels
+  brandGoldLight: '#A68B5B',
   brandBlack: '#050505',
   brandNavy: '#1A1A2E',
   accentSakura: '#A28D91',

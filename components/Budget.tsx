@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTrips } from '../store';
-import { ACTIVITY_CONFIG } from '../constants';
+import { ACTIVITY_CONFIG, COLORS } from '../constants';
 import { ActivityType } from '../types';
 import { Edit2, Save, X } from 'lucide-react';
 
@@ -45,7 +46,7 @@ export const Budget: React.FC = () => {
         <h3 className="text-xl font-black uppercase tracking-tight">Budget Tracking</h3>
         <button 
           onClick={() => { setIsEditing(!isEditing); setTempBudget(trip.budget.total); }}
-          className="p-2 bg-white/5 rounded-lg text-white/40 hover:text-[#D4AF37] transition-colors"
+          className="p-2 bg-white/5 rounded-lg text-white/40 hover:text-[#A68B5B] transition-colors"
         >
           {isEditing ? <X size={16} /> : <Edit2 size={16} />}
         </button>
@@ -57,7 +58,7 @@ export const Budget: React.FC = () => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden bg-[#2C2C2E] p-4 rounded-[20px] border border-[#D4AF37]/30 mb-2"
+            className="overflow-hidden bg-[#2C2C2E] p-4 rounded-[20px] border border-[#594D31]/30 mb-2"
           >
             <label className="text-[9px] font-black opacity-30 uppercase ml-2 mb-1 block tracking-wider">Total Trip Budget ($)</label>
             <div className="flex gap-2">
@@ -65,11 +66,11 @@ export const Budget: React.FC = () => {
                 type="number" 
                 value={tempBudget}
                 onChange={e => setTempBudget(Number(e.target.value))}
-                className="flex-1 bg-[#1C1C1E] rounded-xl px-4 py-2 text-sm font-bold border border-white/5 outline-none focus:border-[#D4AF37]"
+                className="flex-1 bg-[#1C1C1E] rounded-xl px-4 py-2 text-sm font-bold border border-white/5 outline-none focus:border-[#594D31]"
               />
               <button 
                 onClick={handleSaveBudget}
-                className="bg-[#D4AF37] text-black px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2"
+                className="bg-[#594D31] text-white px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2"
               >
                 <Save size={14} /> SAVE
               </button>
@@ -85,7 +86,7 @@ export const Budget: React.FC = () => {
         </div>
         <div className="bg-[#2C2C2E] p-4 rounded-[24px] border border-white/5 shadow-sm">
           <p className="text-white/40 text-[8px] font-black uppercase tracking-wider mb-1">Spent</p>
-          <p className={`text-lg font-black ${overBudget ? 'text-red-500' : 'text-[#D4AF37]'}`}>
+          <p className={`text-lg font-black ${overBudget ? 'text-red-500' : 'text-[#A68B5B]'}`}>
             ${totalSpent.toLocaleString()}
           </p>
         </div>
@@ -114,24 +115,6 @@ export const Budget: React.FC = () => {
               />
             </PieChart>
           </ResponsiveContainer>
-        </div>
-        
-        <div className="w-full space-y-2">
-          {Object.values(ActivityType).map((type) => {
-            const amount = data.find(d => d.name === type)?.value || 0;
-            const percentage = totalSpent > 0 ? (amount / totalSpent) * 100 : 0;
-            if (amount === 0) return null;
-            const config = ACTIVITY_CONFIG[type];
-            return (
-              <div key={type} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: config.color }} />
-                  <span className="text-[10px] text-white/60 font-bold">{config.label}</span>
-                </div>
-                <span className="text-[10px] font-black">${amount.toLocaleString()}</span>
-              </div>
-            );
-          })}
         </div>
       </div>
     </div>
