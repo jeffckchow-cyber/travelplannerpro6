@@ -35,18 +35,18 @@ export const COLORS = {
 };
 
 export const ACTIVITY_CONFIG = {
-  [ActivityType.FOOD]: { icon: <Utensils size={18} />, color: '#F97316', label: 'Food' },
-  [ActivityType.SIGHTSEEING]: { icon: <Camera size={18} />, color: '#3B82F6', label: 'Sightseeing' },
-  [ActivityType.TRANSPORT]: { icon: <TrainFront size={18} />, color: '#22C55E', label: 'Transport' },
-  [ActivityType.HOTEL]: { icon: <Hotel size={18} />, color: '#A855F7', label: 'Hotel' },
-  [ActivityType.SHOPPING]: { icon: <ShoppingBag size={18} />, color: '#EC4899', label: 'Shopping' },
-  [ActivityType.OTHER]: { icon: <MoreHorizontal size={18} />, color: '#94A3B8', label: 'Other' },
+  [ActivityType.FOOD]: { icon: <utensils size="{18}"/>, color: '#F97316', label: 'Food' },
+  [ActivityType.SIGHTSEEING]: { icon: <camera size="{18}"/>, color: '#3B82F6', label: 'Sightseeing' },
+  [ActivityType.TRANSPORT]: { icon: <trainfront size="{18}"/>, color: '#22C55E', label: 'Transport' },
+  [ActivityType.HOTEL]: { icon: <hotel size="{18}"/>, color: '#A855F7', label: 'Hotel' },
+  [ActivityType.SHOPPING]: { icon: <shoppingbag size="{18}"/>, color: '#EC4899', label: 'Shopping' },
+  [ActivityType.OTHER]: { icon: <morehorizontal size="{18}"/>, color: '#94A3B8', label: 'Other' },
 };
 
 export const WEATHER_ICONS = {
-  Sun: <Sun className="text-yellow-400" size={20} />,
-  CloudSun: <CloudSun className="text-yellow-200" size={20} />,
-  Cloud: <Cloud className="text-gray-400" size={20} />,
-  CloudRain: <CloudRain className="text-blue-400" size={20} />,
-  CloudSnow: <CloudSnow className="text-white" size={20} />,
+  Sun: <sun classname="text-yellow-400" size="{20}"/>,
+  CloudSun: <cloudsun classname="text-yellow-200" size="{20}"/>,
+  Cloud: <cloud classname="text-gray-400" size="{20}"/>,
+  CloudRain: <cloudrain classname="text-blue-400" size="{20}"/>,
+  CloudSnow: <cloudsnow classname="text-white" size="{20}"/>,
 };

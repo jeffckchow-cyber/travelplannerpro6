@@ -4,7 +4,7 @@ import { openDB, IDBPDatabase } from 'idb';
 const DB_NAME = 'travel_planner_db';
 const STORE_NAME = 'app_state';
 
-let dbPromise: Promise<IDBPDatabase>;
+let dbPromise: Promise<idbpdatabase>;
 
 const getDB = () => {
   if (!dbPromise) {

@@ -13,7 +13,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 /**
  * Uploads a file to Supabase storage.
  */
-export const uploadAttachment = async (file: File): Promise<string | null> => {
+export const uploadAttachment = async (file: File): Promise<string |="" null=""> => {
   console.group(`[Supabase:Upload] ${file.name}`);
   try {
     const fileExt = file.name.split('.').pop();
