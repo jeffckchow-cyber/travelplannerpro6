@@ -9,6 +9,7 @@ import { Toolbox } from './components/Toolbox';
 
 type View = 'dashboard' | 'itinerary' | 'budget' | 'toolbox';
 
+// Main application router
 const Main: React.FC = () => {
   const [activeView, setActiveView] = useState<view>('dashboard');
 
