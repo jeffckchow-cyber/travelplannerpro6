@@ -18,13 +18,13 @@ export const Budget: React.FC = () => {
   const getExpensesByCategory = () => {
     const categories: Record<string, number> = {};
     Object.values(ActivityType).forEach(type => categories[type] = 0);
-
+    
     trip.dailyItinerary.forEach(day => {
       day.activities.forEach(act => {
         categories[act.type] += act.cost;
       });
     });
-
+    
     return Object.entries(categories)
       .filter(([_, val]) => val > 0)
       .map(([name, value]) => ({ name, value }));
@@ -44,7 +44,7 @@ export const Budget: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-1">
         <h3 className="text-xl font-black uppercase tracking-tight">Budget Tracking</h3>
-        <button
+        <button 
           onClick={() => { setIsEditing(!isEditing); setTempBudget(trip.budget.total); }}
           className="p-2 bg-white/5 rounded-lg text-white/40 hover:text-[#A68B5B] transition-colors"
         >
@@ -54,7 +54,7 @@ export const Budget: React.FC = () => {
 
       <AnimatePresence>
         {isEditing && (
-          <motion.div
+          <motion.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -62,13 +62,13 @@ export const Budget: React.FC = () => {
           >
             <label className="text-[9px] font-black opacity-30 uppercase ml-2 mb-1 block tracking-wider">Total Trip Budget ($)</label>
             <div className="flex gap-2">
-              <input
-                type="number"
+              <input 
+                type="number" 
                 value={tempBudget}
-                onChange={(e) => setTempBudget(Number(e.target.value))}
+                onChange={e => setTempBudget(Number(e.target.value))}
                 className="flex-1 bg-[#1C1C1E] rounded-xl px-4 py-2 text-sm font-bold border border-white/5 outline-none focus:border-[#594D31]"
               />
-              <button
+              <button 
                 onClick={handleSaveBudget}
                 className="bg-[#594D31] text-white px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2"
               >
@@ -109,9 +109,9 @@ export const Budget: React.FC = () => {
                   <Cell key={`cell-${index}`} fill={ACTIVITY_CONFIG[entry.name as ActivityType].color} />
                 ))}
               </Pie>
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1c1c1e', border: '1px solid #38383a', borderRadius: '12px', fontSize: '10px' }}
-                itemStyle={{ color: '#ffffff' }}
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#1C1C1E', border: '1px solid #38383A', borderRadius: '12px', fontSize: '10px' }}
+                itemStyle={{ color: '#FFFFFF' }}
               />
             </PieChart>
           </ResponsiveContainer>

@@ -21,12 +21,6 @@ interface TripContextType {
   addTransport: (tripId: string, transport: Omit<TransportDetail, 'id'>) => void;
   updateTransport: (tripId: string, transport: TransportDetail) => void;
   deleteTransport: (tripId: string, transportId: string) => void;
-  importFullState: (data: AppState) => void;
-  importSingleTrip: (trip: Trip) => void;
-  updateNotes: (tripId: string, notes: string) => void;
-  updateChecklist: (tripId: string, itemId: string, completed: boolean) => void;
-  addChecklistItem: (tripId: string, item: string) => void;
-  refreshFromCloud: () => void;
 }
 
 const INITIAL_TRIPS: Trip[] = [];
@@ -38,7 +32,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState(false);
-
+  
   // Use a ref to track the latest state for the sync debounce
   const stateRef = useRef(state);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -95,7 +89,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // Always save locally immediately
       await saveLocalState(currentState);
-
+      
       // Push to Supabase
       await syncAppState(currentState);
       console.log('[Store] Cloud Sync Complete');
@@ -132,7 +126,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: crypto.randomUUID(),
       status: 'planning',
       dailyItinerary: [],
-      budget: { total: 0 },
+      budget: { totalBudget: 0, expenses: [] },
       checklist: [],
       stays: [],
       transports: [],
@@ -142,11 +136,9 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Generate daily itinerary based on dates
     const start = new Date(tripData.startDate);
     const end = new Date(tripData.endDate);
-
-    let dayNum = 1;
+    
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       newTrip.dailyItinerary.push({
-        day: dayNum++,
         date: d.toISOString().split('T')[0],
         activities: []
       });
@@ -283,67 +275,6 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
-  const importFullState = (data: AppState) => {
-    setState(data);
-  };
-
-  const importSingleTrip = (trip: Trip) => {
-    setState(prev => ({
-      ...prev,
-      trips: [...prev.trips, trip]
-    }));
-  };
-
-  const updateNotes = (tripId: string, notes: string) => {
-    setState(prev => ({
-      ...prev,
-      trips: prev.trips.map(t => t.id === tripId ? { ...t, notes } : t)
-    }));
-  };
-
-  const updateChecklist = (tripId: string, itemId: string, completed: boolean) => {
-    setState(prev => ({
-      ...prev,
-      trips: prev.trips.map(t => {
-        if (t.id !== tripId) return t;
-        return {
-          ...t,
-          checklist: t.checklist.map(item => item.id === itemId ? { ...item, completed } : item)
-        };
-      })
-    }));
-  };
-
-  const addChecklistItem = (tripId: string, item: string) => {
-    setState(prev => ({
-      ...prev,
-      trips: prev.trips.map(t => {
-        if (t.id !== tripId) return t;
-        return {
-          ...t,
-          checklist: [...t.checklist, { id: crypto.randomUUID(), item, completed: false }]
-        };
-      })
-    }));
-  };
-
-  const refreshFromCloud = async () => {
-    setIsSyncing(true);
-    setSyncError(false);
-    try {
-      const cloudState = await fetchAppState();
-      if (cloudState && cloudState.trips) {
-        setState(cloudState);
-        await saveLocalState(cloudState);
-      }
-    } catch (error) {
-      console.error('[Store] Refresh Failed:', error);
-      setSyncError(true);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   return (
     <TripContext.Provider value={{
       state,
@@ -361,13 +292,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       deleteStay,
       addTransport,
       updateTransport,
-      deleteTransport,
-      importFullState,
-      importSingleTrip,
-      updateNotes,
-      updateChecklist,
-      addChecklistItem,
-      refreshFromCloud
+      deleteTransport
     }}>
       {children}
     </TripContext.Provider>

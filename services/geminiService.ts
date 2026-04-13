@@ -1,8 +1,8 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Fix: Always use named parameter for apiKey and direct import.meta.env access
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+// Fix: Always use named parameter for apiKey and direct process.env.API_KEY access
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const generateItinerarySuggestions = async (destination: string, days: number) => {
   try {

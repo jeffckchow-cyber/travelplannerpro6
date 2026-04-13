@@ -1,10 +1,10 @@
 
-import {
-  Utensils,
-  Camera,
-  TrainFront,
-  Hotel,
-  ShoppingBag,
+import { 
+  Utensils, 
+  Camera, 
+  TrainFront, 
+  Hotel, 
+  ShoppingBag, 
   MoreHorizontal,
   Sun,
   CloudSun,
@@ -20,7 +20,7 @@ export const COLORS = {
   bgSecondary: '#2C2C2E',
   bgTertiary: '#3A3A3C',
   // Coloro 091-37-14 (Deep Muted Bronze)
-  brandGold: '#594D31',
+  brandGold: '#594D31', 
   // A lifted, luminous version of the same hue for high-contrast text/labels
   brandGoldLight: '#A68B5B',
   brandBlack: '#050505',

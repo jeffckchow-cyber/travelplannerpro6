@@ -2,7 +2,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import './index.css';
 
 // Register Service Worker with error handling
 if ('serviceWorker' in navigator) {
