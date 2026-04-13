@@ -8,34 +8,34 @@ interface TripContextType {
   state: AppState;
   isSyncing: boolean;
   syncError: boolean;
-  addTrip: (trip: Omit<Trip, 'id' | 'dailyItinerary' | 'budget' | 'checklist' | 'status' | 'stays' | 'transports' | 'notes'>) => void;
-  updateTrip: (tripId: string, updates: Partial<Trip>) => void;
+  addTrip: (trip: Omit<trip, 'id'="" |="" 'dailyitinerary'="" |="" 'budget'="" |="" 'checklist'="" |="" 'status'="" |="" 'stays'="" |="" 'transports'="" |="" 'notes'="">) => void;
+  updateTrip: (tripId: string, updates: Partial<trip>) => void;
   deleteTrip: (id: string) => void;
   setActiveTrip: (id: string | null) => void;
-  addActivity: (tripId: string, dayIndex: number, activity: Omit<Activity, 'id'>) => void;
+  addActivity: (tripId: string, dayIndex: number, activity: Omit<activity, 'id'="">) => void;
   updateActivity: (tripId: string, dayIndex: number, activity: Activity) => void;
   deleteActivity: (tripId: string, dayIndex: number, activityId: string) => void;
-  addStay: (tripId: string, stay: Omit<Stay, 'id'>) => void;
+  addStay: (tripId: string, stay: Omit<stay, 'id'="">) => void;
   updateStay: (tripId: string, stay: Stay) => void;
   deleteStay: (tripId: string, stayId: string) => void;
-  addTransport: (tripId: string, transport: Omit<TransportDetail, 'id'>) => void;
+  addTransport: (tripId: string, transport: Omit<transportdetail, 'id'="">) => void;
   updateTransport: (tripId: string, transport: TransportDetail) => void;
   deleteTransport: (tripId: string, transportId: string) => void;
 }
 
 const INITIAL_TRIPS: Trip[] = [];
 
-const TripContext = createContext<TripContextType | undefined>(undefined);
+const TripContext = createContext<tripcontexttype |="" undefined="">(undefined);
 
 export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<AppState>({ trips: INITIAL_TRIPS, activeTripId: null });
+  const [state, setState] = useState<appstate>({ trips: INITIAL_TRIPS, activeTripId: null });
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState(false);
   
   // Use a ref to track the latest state for the sync debounce
   const stateRef = useRef(state);
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const syncTimeoutRef = useRef<nodejs.timeout |="" null="">(null);
 
   // Update ref whenever state changes
   useEffect(() => {
@@ -120,7 +120,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [state, isInitialized, syncData]);
 
-  const addTrip = (tripData: Omit<Trip, 'id' | 'dailyItinerary' | 'budget' | 'checklist' | 'status' | 'stays' | 'transports' | 'notes'>) => {
+  const addTrip = (tripData: Omit<trip, 'id'="" |="" 'dailyitinerary'="" |="" 'budget'="" |="" 'checklist'="" |="" 'status'="" |="" 'stays'="" |="" 'transports'="" |="" 'notes'="">) => {
     const newTrip: Trip = {
       ...tripData,
       id: crypto.randomUUID(),
@@ -151,7 +151,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
-  const updateTrip = (tripId: string, updates: Partial<Trip>) => {
+  const updateTrip = (tripId: string, updates: Partial<trip>) => {
     setState(prev => ({
       ...prev,
       trips: prev.trips.map(t => t.id === tripId ? { ...t, ...updates } : t)
@@ -170,7 +170,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState(prev => ({ ...prev, activeTripId: id }));
   };
 
-  const addActivity = (tripId: string, dayIndex: number, activity: Omit<Activity, 'id'>) => {
+  const addActivity = (tripId: string, dayIndex: number, activity: Omit<activity, 'id'="">) => {
     setState(prev => ({
       ...prev,
       trips: prev.trips.map(t => {
@@ -215,7 +215,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
-  const addStay = (tripId: string, stay: Omit<Stay, 'id'>) => {
+  const addStay = (tripId: string, stay: Omit<stay, 'id'="">) => {
     setState(prev => ({
       ...prev,
       trips: prev.trips.map(t => {
@@ -245,7 +245,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
-  const addTransport = (tripId: string, transport: Omit<TransportDetail, 'id'>) => {
+  const addTransport = (tripId: string, transport: Omit<transportdetail, 'id'="">) => {
     setState(prev => ({
       ...prev,
       trips: prev.trips.map(t => {
@@ -276,24 +276,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <TripContext.Provider value={{
-      state,
-      isSyncing,
-      syncError,
-      addTrip,
-      updateTrip,
-      deleteTrip,
-      setActiveTrip,
-      addActivity,
-      updateActivity,
-      deleteActivity,
-      addStay,
-      updateStay,
-      deleteStay,
-      addTransport,
-      updateTransport,
-      deleteTransport
-    }}>
+    <tripcontext.provider value="{{" state,="" issyncing,="" syncerror,="" addtrip,="" updatetrip,="" deletetrip,="" setactivetrip,="" addactivity,="" updateactivity,="" deleteactivity,="" addstay,="" updatestay,="" deletestay,="" addtransport,="" updatetransport,="" deletetransport="" }}="">
       {children}
     </TripContext.Provider>
   );
