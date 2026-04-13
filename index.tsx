@@ -24,7 +24,7 @@ if (!rootElement) {
 // Render the application with React Strict Mode enabled to catch potential issues
 const root = ReactDOM.createRoot(rootElement);
 root.render(
-  <react.strictmode>
-    <app/>
+  <React.StrictMode>
+    <App />
   </React.StrictMode>
 );
