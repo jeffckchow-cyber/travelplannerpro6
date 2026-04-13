@@ -21,10 +21,10 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-// Render the application with strict mode enabled
+// Render the application with React Strict Mode enabled to catch potential issues
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <react.strictmode>
-    <App/>
+    <app/>
   </React.StrictMode>
 );

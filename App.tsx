@@ -9,20 +9,20 @@ import { Toolbox } from './components/Toolbox';
 
 type View = 'dashboard' | 'itinerary' | 'budget' | 'toolbox';
 
-// Main application router
+// Main application router component
 const Main: React.FC = () => {
   const [activeView, setActiveView] = useState<view>('dashboard');
 
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard onnavigate="{setActiveView}"/>;
+        return <dashboard onnavigate="{setActiveView}"/>;
       case 'itinerary':
-        return <TripDetail onback="{()" ==""> setActiveView('Dashboard')} />;
+        return <tripdetail onback="{()" ==""> setActiveView('dashboard')} />;
       case 'budget':
-        return <Budget/>;
+        return <budget/>;
       case 'toolbox':
-        return <Toolbox/>;
+        return <toolbox/>;
       default:
         return <dashboard onnavigate="{setActiveView}"/>;
     }
