@@ -16,13 +16,13 @@ const Main: React.FC = () => {
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
-        return <dashboard onnavigate="{setActiveView}"/>;
+        return <Dashboard onnavigate="{setActiveView}"/>;
       case 'itinerary':
-        return <tripdetail onback="{()" ==""> setActiveView('dashboard')} />;
+        return <TripDetail onback="{()" ==""> setActiveView('Dashboard')} />;
       case 'budget':
-        return <budget/>;
+        return <Budget/>;
       case 'toolbox':
-        return <toolbox/>;
+        return <Toolbox/>;
       default:
         return <dashboard onnavigate="{setActiveView}"/>;
     }

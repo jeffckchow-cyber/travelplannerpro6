@@ -25,6 +25,6 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <react.strictmode>
-    <app/>
+    <App/>
   </React.StrictMode>
 );
