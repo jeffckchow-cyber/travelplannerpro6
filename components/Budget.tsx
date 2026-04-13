@@ -16,15 +16,15 @@ export const Budget: React.FC = () => {
   if (!trip) return null;
 
   const getExpensesByCategory = () => {
-    const categories: Record<string, number=""> = {};
+    const categories: Record<string, number> = {};
     Object.values(ActivityType).forEach(type => categories[type] = 0);
-    
+
     trip.dailyItinerary.forEach(day => {
       day.activities.forEach(act => {
         categories[act.type] += act.cost;
       });
     });
-    
+
     return Object.entries(categories)
       .filter(([_, val]) => val > 0)
       .map(([name, value]) => ({ name, value }));
@@ -41,55 +41,78 @@ export const Budget: React.FC = () => {
   };
 
   return (
-    <div classname="space-y-4">
-      <div classname="flex justify-between items-center mb-1">
-        <h3 classname="text-xl font-black uppercase tracking-tight">Budget Tracking</h3>
-        <button onclick="{()" ==""> { setIsEditing(!isEditing); setTempBudget(trip.budget.total); }}
+    <div className="space-y-4">
+      <div className="flex justify-between items-center mb-1">
+        <h3 className="text-xl font-black uppercase tracking-tight">Budget Tracking</h3>
+        <button
+          onClick={() => { setIsEditing(!isEditing); setTempBudget(trip.budget.total); }}
           className="p-2 bg-white/5 rounded-lg text-white/40 hover:text-[#A68B5B] transition-colors"
         >
-          {isEditing ? <x size="{16}"/> : <edit2 size="{16}"/>}
+          {isEditing ? <X size={16} /> : <Edit2 size={16} />}
         </button>
       </div>
 
-      <animatepresence>
+      <AnimatePresence>
         {isEditing && (
-          <motion.div initial="{{" height:="" 0,="" opacity:="" 0="" }}="" animate="{{" height:="" 'auto',="" opacity:="" 1="" }}="" exit="{{" height:="" 0,="" opacity:="" 0="" }}="" classname="overflow-hidden bg-[#2C2C2E] p-4 rounded-[20px] border border-[#594D31]/30 mb-2">
-            <label classname="text-[9px] font-black opacity-30 uppercase ml-2 mb-1 block tracking-wider">Total Trip Budget ($)</label>
-            <div classname="flex gap-2">
-              <input type="number" value="{tempBudget}" onchange="{e" ==""> setTempBudget(Number(e.target.value))}
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden bg-[#2C2C2E] p-4 rounded-[20px] border border-[#594D31]/30 mb-2"
+          >
+            <label className="text-[9px] font-black opacity-30 uppercase ml-2 mb-1 block tracking-wider">Total Trip Budget ($)</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={tempBudget}
+                onChange={(e) => setTempBudget(Number(e.target.value))}
                 className="flex-1 bg-[#1C1C1E] rounded-xl px-4 py-2 text-sm font-bold border border-white/5 outline-none focus:border-[#594D31]"
               />
-              <button onclick="{handleSaveBudget}" classname="bg-[#594D31] text-white px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2">
-                <save size="{14}"/> SAVE
+              <button
+                onClick={handleSaveBudget}
+                className="bg-[#594D31] text-white px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2"
+              >
+                <Save size={14} /> SAVE
               </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div classname="grid grid-cols-2 gap-3 mb-4">
-        <div classname="bg-[#2C2C2E] p-4 rounded-[24px] border border-white/5 shadow-sm">
-          <p classname="text-white/40 text-[8px] font-black uppercase tracking-wider mb-1">Budget</p>
-          <p classname="text-lg font-black">${trip.budget.total.toLocaleString()}</p>
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-[#2C2C2E] p-4 rounded-[24px] border border-white/5 shadow-sm">
+          <p className="text-white/40 text-[8px] font-black uppercase tracking-wider mb-1">Budget</p>
+          <p className="text-lg font-black">${trip.budget.total.toLocaleString()}</p>
         </div>
-        <div classname="bg-[#2C2C2E] p-4 rounded-[24px] border border-white/5 shadow-sm">
-          <p classname="text-white/40 text-[8px] font-black uppercase tracking-wider mb-1">Spent</p>
-          <p classname="{`text-lg" font-black="" ${overbudget="" ?="" 'text-red-500'="" :="" 'text-[#a68b5b]'}`}="">
+        <div className="bg-[#2C2C2E] p-4 rounded-[24px] border border-white/5 shadow-sm">
+          <p className="text-white/40 text-[8px] font-black uppercase tracking-wider mb-1">Spent</p>
+          <p className={`text-lg font-black ${overBudget ? 'text-red-500' : 'text-[#A68B5B]'}`}>
             ${totalSpent.toLocaleString()}
           </p>
         </div>
       </div>
 
-      <div classname="bg-[#2C2C2E] p-4 rounded-[28px] border border-white/5 flex flex-col items-center">
-        <div classname="w-full h-48 mb-2">
-          <responsivecontainer width="100%" height="100%">
-            <piechart>
-              <pie data="{data}" cx="50%" cy="50%" innerradius="{50}" outerradius="{65}" paddingangle="{4}" datakey="value">
+      <div className="bg-[#2C2C2E] p-4 rounded-[28px] border border-white/5 flex flex-col items-center">
+        <div className="w-full h-48 mb-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={50}
+                outerRadius={65}
+                paddingAngle={4}
+                dataKey="value"
+              >
                 {data.map((entry, index) => (
-                  <cell key="{`cell-${index}`}" fill="{ACTIVITY_CONFIG[entry.name" as="" activitytype].color}=""/>
+                  <Cell key={`cell-${index}`} fill={ACTIVITY_CONFIG[entry.name as ActivityType].color} />
                 ))}
               </Pie>
-              <tooltip contentstyle="{{" backgroundcolor:="" '#1c1c1e',="" border:="" '1px="" solid="" #38383a',="" borderradius:="" '12px',="" fontsize:="" '10px'="" }}="" itemstyle="{{" color:="" '#ffffff'="" }}=""/>
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1c1c1e', border: '1px solid #38383a', borderRadius: '12px', fontSize: '10px' }}
+                itemStyle={{ color: '#ffffff' }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>

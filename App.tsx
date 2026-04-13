@@ -8,27 +8,26 @@ import { Toolbox } from './components/Toolbox';
 
 type View = 'dashboard' | 'itinerary' | 'budget' | 'toolbox';
 
-// Main Application Router
 const Main: React.FC = () => {
-  const [activeView, setActiveView] = useState<view>('dashboard');
+  const [activeView, setActiveView] = useState<View>('dashboard');
 
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
-        return <dashboard onnavigate="{setActiveView}"/>;
+        return <Dashboard onNavigate={setActiveView} />;
       case 'itinerary':
-        return <tripdetail onback="{()" ==""> setActiveView('dashboard')} />;
+        return <TripDetail onBack={() => setActiveView('dashboard')} />;
       case 'budget':
-        return <budget/>;
+        return <Budget />;
       case 'toolbox':
-        return <toolbox/>;
+        return <Toolbox />;
       default:
-        return <dashboard onnavigate="{setActiveView}"/>;
+        return <Dashboard onNavigate={setActiveView} />;
     }
   };
 
   return (
-    <layout activeview="{activeView}" setview="{setActiveView}">
+    <Layout activeView={activeView} setView={setActiveView}>
       {renderContent()}
     </Layout>
   );
@@ -36,8 +35,8 @@ const Main: React.FC = () => {
 
 export default function App() {
   return (
-    <tripprovider>
-      <main/>
+    <TripProvider>
+      <Main />
     </TripProvider>
   );
 }

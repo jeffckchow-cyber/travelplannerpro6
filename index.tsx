@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './index.css';
 
 // Register Service Worker with error handling
 if ('serviceWorker' in navigator) {
@@ -24,7 +25,7 @@ if (!rootElement) {
 // Render the application with React Strict Mode enabled to catch potential issues
 const root = ReactDOM.createRoot(rootElement);
 root.render(
-  <react.strictmode>
-    <app/>
+  <React.StrictMode>
+    <App />
   </React.StrictMode>
 );

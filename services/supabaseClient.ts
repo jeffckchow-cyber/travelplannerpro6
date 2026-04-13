@@ -1,8 +1,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://kicskjevzuegrxcektnd.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpY3NramV2enVlZ3J4Y2VrdG5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMzU1NjgsImV4cCI6MjA4NTkxMTU2OH0.KsEBcE_56vWPMj6-ho-2OGJ3RYCHfrTxOecXK0NPrmc';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 // The ID used to identify the single itinerary record shared across devices.
 // User confirmed the database 'id' column is now of type TEXT.
@@ -13,7 +13,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 /**
  * Uploads a file to Supabase storage.
  */
-export const uploadAttachment = async (file: File): Promise<string |="" null=""> => {
+export const uploadAttachment = async (file: File): Promise<string | null> => {
   console.group(`[Supabase:Upload] ${file.name}`);
   try {
     const fileExt = file.name.split('.').pop();
@@ -56,10 +56,10 @@ export const syncAppState = async (state: any) => {
     console.log('Attempting Upsert for ID:', SHARED_STATE_ID);
     const { data, error } = await supabase
       .from('itineraries')
-      .upsert({ 
-        id: SHARED_STATE_ID, 
+      .upsert({
+        id: SHARED_STATE_ID,
         data: state,
-        updated_at: new Date().toISOString() 
+        updated_at: new Date().toISOString()
       }, { onConflict: 'id' })
       .select();
 
@@ -99,7 +99,7 @@ export const fetchAppState = async () => {
       console.groupEnd();
       return null;
     }
-    
+
     console.log(`Cloud data retrieved. Last Updated: ${data.updated_at}`);
     console.groupEnd();
     return data?.data;
