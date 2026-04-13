@@ -1,278 +1,299 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Trip, AppState, Activity, Stay, TransportDetail } from './types';
 import { saveLocalState, getLocalState } from './services/dbService';
 import { syncAppState, fetchAppState } from './services/supabaseClient';
 
+// Global state context for the application
 interface TripContextType {
   state: AppState;
   isSyncing: boolean;
   syncError: boolean;
-  addTrip: (trip: Omit<trip, 'id'="" |="" 'dailyitinerary'="" |="" 'budget'="" |="" 'checklist'="" |="" 'status'="" |="" 'stays'="" |="" 'transports'="" |="" 'notes'="">) => void;
-  updateTrip: (tripId: string, updates: Partial<trip>) => void;
+  addTrip: (trip: Omit<Trip, 'id' | 'dailyItinerary' | 'budget' | 'checklist' | 'status' | 'stays' | 'transports' | 'notes'>) => void;
+  updateTrip: (tripId: string, updates: Partial<Trip>) => void;
   deleteTrip: (id: string) => void;
   setActiveTrip: (id: string | null) => void;
-  addActivity: (tripId: string, dayIndex: number, activity: Omit<activity, 'id'="">) => void;
+  addActivity: (tripId: string, dayIndex: number, activity: Omit<Activity, 'id'>) => void;
   updateActivity: (tripId: string, dayIndex: number, activity: Activity) => void;
   deleteActivity: (tripId: string, dayIndex: number, activityId: string) => void;
-  addStay: (tripId: string, stay: Omit<stay, 'id'="">) => void;
+  addStay: (tripId: string, stay: Omit<Stay, 'id'>) => void;
   updateStay: (tripId: string, stay: Stay) => void;
   deleteStay: (tripId: string, stayId: string) => void;
-  addTransport: (tripId: string, transport: Omit<transportdetail, 'id'="">) => void;
+  addTransport: (tripId: string, transport: Omit<TransportDetail, 'id'>) => void;
   updateTransport: (tripId: string, transport: TransportDetail) => void;
   deleteTransport: (tripId: string, transportId: string) => void;
-  updateNotes: (tripId: string, notes: string) => void;
-  updateChecklist: (tripId: string, itemId: string, completed: boolean) => void;
-  addChecklistItem: (tripId: string, item: string) => void;
-  importFullState: (newState: AppState) => void;
-  importSingleTrip: (newTrip: Trip) => void;
-  refreshFromCloud: () => Promise<void>;
 }
 
-const TripContext = createContext<tripcontexttype |="" undefined="">(undefined);
+const INITIAL_TRIPS: Trip[] = [];
 
-const INITIAL_TRIPS: Trip[] = [
-  {
-    id: 'preview-trip',
-    title: 'US Trip 2026',
-    startDate: '2026-05-19',
-    endDate: '2026-05-26',
-    status: 'planning',
-    coverImage: 'https://images.unsplash.com/photo-1508433957232-31d15fe4a3ba?auto=format&fit=crop&w=1200&q=80',
-    bannerPosition: 50,
-    budget: { total: 5000 },
-    notes: 'Exciting US road trip!',
-    stays: [],
-    transports: [],
-    checklist: [],
-    dailyItinerary: Array.from({ length: 8 }, (_, i) => {
-      const date = new Date('2026-05-19');
-      date.setDate(date.getDate() + i);
-      return {
-        day: i + 1,
-        date: date.toISOString().split('T')[0],
-        activities: [],
-      };
-    })
-  }
-];
+const TripContext = createContext<TripContextType | undefined>(undefined);
 
 export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<appstate>({ trips: INITIAL_TRIPS, activeTripId: null });
+  const [state, setState] = useState<AppState>({ trips: INITIAL_TRIPS, activeTripId: null });
+  const [isInitialized, setIsInitialized] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState(false);
-  const skipSyncRef = useRef(false);
+  
+  // Use a ref to track the latest state for the sync debounce
+  const stateRef = useRef(state);
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Aggressive Fetch Logic: Open -> Local -> Remote
+  // Update ref whenever state changes
   useEffect(() => {
-    const init = async () => {
-      console.log("[AppInit] Initializing data...");
-      
-      const local = await getLocalState();
-      if (local) {
-        console.log("[AppInit] Local state restored.");
-        setState(local);
-      }
-
-      if (navigator.onLine) {
-        try {
-          const remote = await fetchAppState();
-          if (remote) {
-            console.log("[AppInit] Cloud data found. Synchronizing...");
-            skipSyncRef.current = true; 
-            setState(remote);
-            await saveLocalState(remote);
-          }
-        } catch (err) {
-          console.error("[AppInit] Cloud sync interrupted during init.");
-          setSyncError(true);
-        }
-      }
-    };
-    init();
-  }, []);
-
-  // Sync state to cloud on changes
-  useEffect(() => {
-    const performSync = async () => {
-      if (skipSyncRef.current) {
-        skipSyncRef.current = false;
-        return;
-      }
-
-      // Important: Save locally first
-      saveLocalState(state);
-
-      if (navigator.onLine && state.trips.length > 0) {
-        setIsSyncing(true);
-        try {
-          await syncAppState(state);
-          setSyncError(false);
-        } catch (e) {
-          console.error("[Sync] Background update failed. Changes saved locally only.");
-          setSyncError(true);
-        } finally {
-          setIsSyncing(false);
-        }
-      }
-    };
-
-    const timer = setTimeout(performSync, 1000); // Debounce sync
-    return () => clearTimeout(timer);
+    stateRef.current = state;
   }, [state]);
 
-  const refreshFromCloud = async () => {
-    if (!navigator.onLine) {
-      alert("No internet connection.");
-      return;
-    }
+  // 1. Initial Load (Supabase -> IndexedDB -> State)
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        // Try cloud first
+        const cloudState = await fetchAppState();
+        if (cloudState && cloudState.trips) {
+          console.log('[Store] Loaded from Cloud');
+          setState(cloudState);
+          await saveLocalState(cloudState);
+          setIsInitialized(true);
+          return;
+        }
+
+        // Fallback to local
+        const localState = await getLocalState();
+        if (localState && localState.trips) {
+          console.log('[Store] Loaded from Local');
+          setState(localState);
+        } else {
+          console.log('[Store] No existing data, starting fresh');
+        }
+      } catch (error) {
+        console.error('[Store] Initialization Error:', error);
+        // Try local if cloud failed
+        const localState = await getLocalState();
+        if (localState && localState.trips) {
+          setState(localState);
+        }
+      } finally {
+        setIsInitialized(true);
+      }
+    };
+
+    loadInitialData();
+  }, []);
+
+  // 2. Sync to Cloud & Local when state changes
+  const syncData = useCallback(async (currentState: AppState) => {
+    if (!isInitialized) return;
+
     setIsSyncing(true);
     setSyncError(false);
+
     try {
-      const remote = await fetchAppState();
-      if (remote) {
-        skipSyncRef.current = true;
-        setState(remote);
-        await saveLocalState(remote);
-        console.log("[ManualSync] Successfully updated with cloud data.");
-      } else {
-        console.log("[ManualSync] No remote data available.");
-      }
-    } catch (err) {
-      console.error("[ManualSync] Sync operation failed.");
+      // Always save locally immediately
+      await saveLocalState(currentState);
+      
+      // Push to Supabase
+      await syncAppState(currentState);
+      console.log('[Store] Cloud Sync Complete');
+    } catch (error) {
+      console.error('[Store] Sync Failed:', error);
       setSyncError(true);
     } finally {
       setIsSyncing(false);
     }
+  }, [isInitialized]);
+
+  // Debounce state changes to prevent spamming the database
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    syncTimeoutRef.current = setTimeout(() => {
+      syncData(stateRef.current);
+    }, 2000); // Wait 2 seconds after last change before syncing
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [state, isInitialized, syncData]);
+
+  const addTrip = (tripData: Omit<Trip, 'id' | 'dailyItinerary' | 'budget' | 'checklist' | 'status' | 'stays' | 'transports' | 'notes'>) => {
+    const newTrip: Trip = {
+      ...tripData,
+      id: crypto.randomUUID(),
+      status: 'planning',
+      dailyItinerary: [],
+      budget: { totalBudget: 0, expenses: [] },
+      checklist: [],
+      stays: [],
+      transports: [],
+      notes: ''
+    };
+
+    // Generate daily itinerary based on dates
+    const start = new Date(tripData.startDate);
+    const end = new Date(tripData.endDate);
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      newTrip.dailyItinerary.push({
+        date: d.toISOString().split('T')[0],
+        activities: []
+      });
+    }
+
+    setState(prev => ({
+      ...prev,
+      trips: [...prev.trips, newTrip],
+      activeTripId: newTrip.id
+    }));
   };
 
-  const addTrip = useCallback((data: any) => {
-    const start = new Date(data.startDate);
-    const end = new Date(data.endDate);
-    const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const updateTrip = (tripId: string, updates: Partial<Trip>) => {
+    setState(prev => ({
+      ...prev,
+      trips: prev.trips.map(t => t.id === tripId ? { ...t, ...updates } : t)
+    }));
+  };
 
-    const dailyItinerary = Array.from({ length: diffDays }, (_, i) => {
-      const date = new Date(start);
-      date.setDate(start.getDate() + i);
-      return { day: i + 1, date: date.toISOString().split('T')[0], activities: [] };
-    });
+  const deleteTrip = (id: string) => {
+    setState(prev => ({
+      ...prev,
+      trips: prev.trips.filter(t => t.id !== id),
+      activeTripId: prev.activeTripId === id ? null : prev.activeTripId
+    }));
+  };
 
-    const newTrip: Trip = { ...data, id: crypto.randomUUID(), status: 'planning', budget: { total: 2000 }, checklist: [], stays: [], transports: [], notes: '', dailyItinerary };
-    setState(prev => ({ ...prev, trips: [...prev.trips, newTrip] }));
-  }, []);
-
-  const updateTrip = useCallback((tripId: string, updates: Partial<trip>) => {
-    setState(prev => {
-      const index = prev.trips.findIndex(t => t.id === tripId);
-      if (index === -1) return prev;
-      const newTrips = [...prev.trips];
-      newTrips[index] = { ...newTrips[index], ...updates };
-      return { ...prev, trips: newTrips };
-    });
-  }, []);
-
-  const deleteTrip = useCallback((id: string) => {
-    setState(prev => ({ ...prev, trips: prev.trips.filter(t => t.id !== id), activeTripId: prev.activeTripId === id ? null : prev.activeTripId }));
-  }, []);
-
-  const setActiveTrip = useCallback((id: string | null) => {
+  const setActiveTrip = (id: string | null) => {
     setState(prev => ({ ...prev, activeTripId: id }));
-  }, []);
+  };
 
-  const addActivity = useCallback((tripId: string, dayIndex: number, activity: Omit<activity, 'id'="">) => {
+  const addActivity = (tripId: string, dayIndex: number, activity: Omit<Activity, 'id'>) => {
     setState(prev => ({
       ...prev,
-      trips: prev.trips.map(trip => {
-        if (trip.id !== tripId) return trip;
-        const newDaily = [...trip.dailyItinerary];
-        newDaily[dayIndex].activities.push({ ...activity, id: crypto.randomUUID() });
-        return { ...trip, dailyItinerary: newDaily };
-      })
-    }));
-  }, []);
-
-  const updateActivity = useCallback((tripId: string, dayIndex: number, activity: Activity) => {
-    setState(prev => ({
-      ...prev,
-      trips: prev.trips.map(trip => {
-        if (trip.id !== tripId) return trip;
-        const newDaily = [...trip.dailyItinerary];
-        newDaily[dayIndex].activities = newDaily[dayIndex].activities.map(a => a.id === activity.id ? activity : a);
-        return { ...trip, dailyItinerary: newDaily };
-      })
-    }));
-  }, []);
-
-  const deleteActivity = useCallback((tripId: string, dayIndex: number, activityId: string) => {
-    setState(prev => ({
-      ...prev,
-      trips: prev.trips.map(trip => {
-        if (trip.id !== tripId) return trip;
-        const newDaily = [...trip.dailyItinerary];
-        newDaily[dayIndex].activities = newDaily[dayIndex].activities.filter(act => act.id !== activityId);
-        return { ...trip, dailyItinerary: newDaily };
-      })
-    }));
-  }, []);
-
-  const addStay = useCallback((tripId: string, stay: Omit<stay, 'id'="">) => {
-    setState(prev => ({ ...prev, trips: prev.trips.map(trip => trip.id === tripId ? { ...trip, stays: [...trip.stays, { ...stay, id: crypto.randomUUID() }] } : trip) }));
-  }, []);
-
-  const updateStay = useCallback((tripId: string, stay: Stay) => {
-    setState(prev => ({ ...prev, trips: prev.trips.map(trip => trip.id === tripId ? { ...trip, stays: trip.stays.map(s => s.id === stay.id ? stay : s) } : trip) }));
-  }, []);
-
-  const deleteStay = useCallback((tripId: string, stayId: string) => {
-    setState(prev => ({ ...prev, trips: prev.trips.map(trip => trip.id === tripId ? { ...trip, stays: trip.stays.filter(s => s.id !== stayId) } : trip) }));
-  }, []);
-
-  const addTransport = useCallback((tripId: string, transport: Omit<transportdetail, 'id'="">) => {
-    setState(prev => ({ ...prev, trips: prev.trips.map(trip => trip.id === tripId ? { ...trip, transports: [...trip.transports, { ...transport, id: crypto.randomUUID() }] } : trip) }));
-  }, []);
-
-  const updateTransport = useCallback((tripId: string, transport: TransportDetail) => {
-    setState(prev => ({ ...prev, trips: prev.trips.map(trip => trip.id === tripId ? { ...trip, transports: trip.transports.map(t => t.id === transport.id ? transport : t) } : trip) }));
-  }, []);
-
-  const deleteTransport = useCallback((tripId: string, transportId: string) => {
-    setState(prev => ({ ...prev, trips: prev.trips.map(trip => trip.id === tripId ? { ...trip, transports: trip.transports.filter(t => t.id !== transportId) } : trip) }));
-  }, []);
-
-  const updateNotes = useCallback((tripId: string, notes: string) => {
-    setState(prev => ({ ...prev, trips: prev.trips.map(trip => trip.id === tripId ? { ...trip, notes } : trip) }));
-  }, []);
-
-  const updateChecklist = useCallback((tripId: string, itemId: string, completed: boolean) => {
-    setState(prev => ({ ...prev, trips: prev.trips.map(trip => trip.id === tripId ? { ...trip, checklist: trip.checklist.map(item => item.id === itemId ? { ...item, completed } : item) } : trip) }));
-  }, []);
-
-  const addChecklistItem = useCallback((tripId: string, item: string) => {
-    setState(prev => ({ ...prev, trips: prev.trips.map(trip => trip.id === tripId ? { ...trip, checklist: [...trip.checklist, { id: crypto.randomUUID(), item, completed: false }] } : trip) }));
-  }, []);
-
-  const importFullState = useCallback((newState: AppState) => {
-    setState(newState);
-  }, []);
-
-  const importSingleTrip = useCallback((newTrip: Trip) => {
-    setState(prev => {
-      const exists = prev.trips.find(t => t.id === newTrip.id);
-      if (exists) {
-        return {
-          ...prev,
-          trips: prev.trips.map(t => t.id === newTrip.id ? newTrip : t)
+      trips: prev.trips.map(t => {
+        if (t.id !== tripId) return t;
+        const newItinerary = [...t.dailyItinerary];
+        newItinerary[dayIndex] = {
+          ...newItinerary[dayIndex],
+          activities: [...newItinerary[dayIndex].activities, { ...activity, id: crypto.randomUUID() }]
         };
-      }
-      return {
-        ...prev,
-        trips: [...prev.trips, newTrip]
-      };
-    });
-  }, []);
+        return { ...t, dailyItinerary: newItinerary };
+      })
+    }));
+  };
+
+  const updateActivity = (tripId: string, dayIndex: number, activity: Activity) => {
+    setState(prev => ({
+      ...prev,
+      trips: prev.trips.map(t => {
+        if (t.id !== tripId) return t;
+        const newItinerary = [...t.dailyItinerary];
+        newItinerary[dayIndex] = {
+          ...newItinerary[dayIndex],
+          activities: newItinerary[dayIndex].activities.map(a => a.id === activity.id ? activity : a)
+        };
+        return { ...t, dailyItinerary: newItinerary };
+      })
+    }));
+  };
+
+  const deleteActivity = (tripId: string, dayIndex: number, activityId: string) => {
+    setState(prev => ({
+      ...prev,
+      trips: prev.trips.map(t => {
+        if (t.id !== tripId) return t;
+        const newItinerary = [...t.dailyItinerary];
+        newItinerary[dayIndex] = {
+          ...newItinerary[dayIndex],
+          activities: newItinerary[dayIndex].activities.filter(a => a.id !== activityId)
+        };
+        return { ...t, dailyItinerary: newItinerary };
+      })
+    }));
+  };
+
+  const addStay = (tripId: string, stay: Omit<Stay, 'id'>) => {
+    setState(prev => ({
+      ...prev,
+      trips: prev.trips.map(t => {
+        if (t.id !== tripId) return t;
+        return { ...t, stays: [...(t.stays || []), { ...stay, id: crypto.randomUUID() }] };
+      })
+    }));
+  };
+
+  const updateStay = (tripId: string, stay: Stay) => {
+    setState(prev => ({
+      ...prev,
+      trips: prev.trips.map(t => {
+        if (t.id !== tripId) return t;
+        return { ...t, stays: (t.stays || []).map(s => s.id === stay.id ? stay : s) };
+      })
+    }));
+  };
+
+  const deleteStay = (tripId: string, stayId: string) => {
+    setState(prev => ({
+      ...prev,
+      trips: prev.trips.map(t => {
+        if (t.id !== tripId) return t;
+        return { ...t, stays: (t.stays || []).filter(s => s.id !== stayId) };
+      })
+    }));
+  };
+
+  const addTransport = (tripId: string, transport: Omit<TransportDetail, 'id'>) => {
+    setState(prev => ({
+      ...prev,
+      trips: prev.trips.map(t => {
+        if (t.id !== tripId) return t;
+        return { ...t, transports: [...(t.transports || []), { ...transport, id: crypto.randomUUID() }] };
+      })
+    }));
+  };
+
+  const updateTransport = (tripId: string, transport: TransportDetail) => {
+    setState(prev => ({
+      ...prev,
+      trips: prev.trips.map(t => {
+        if (t.id !== tripId) return t;
+        return { ...t, transports: (t.transports || []).map(tr => tr.id === transport.id ? transport : tr) };
+      })
+    }));
+  };
+
+  const deleteTransport = (tripId: string, transportId: string) => {
+    setState(prev => ({
+      ...prev,
+      trips: prev.trips.map(t => {
+        if (t.id !== tripId) return t;
+        return { ...t, transports: (t.transports || []).filter(tr => tr.id !== transportId) };
+      })
+    }));
+  };
 
   return (
-    <tripcontext.provider value="{{" state,="" issyncing,="" syncerror,="" addtrip,="" updatetrip,="" deletetrip,="" setactivetrip,="" addactivity,="" updateactivity,="" deleteactivity,="" addstay,="" updatestay,="" deletestay,="" addtransport,="" updatetransport,="" deletetransport,="" updatenotes,="" updatechecklist,="" addchecklistitem,="" importfullstate,="" importsingletrip,="" refreshfromcloud="" }}="">
+    <TripContext.Provider value={{
+      state,
+      isSyncing,
+      syncError,
+      addTrip,
+      updateTrip,
+      deleteTrip,
+      setActiveTrip,
+      addActivity,
+      updateActivity,
+      deleteActivity,
+      addStay,
+      updateStay,
+      deleteStay,
+      addTransport,
+      updateTransport,
+      deleteTransport
+    }}>
       {children}
     </TripContext.Provider>
   );
@@ -280,6 +301,8 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useTrips = () => {
   const context = useContext(TripContext);
-  if (!context) throw new Error('useTrips must be used within TripProvider');
+  if (context === undefined) {
+    throw new Error('useTrips must be used within a TripProvider');
+  }
   return context;
 };
